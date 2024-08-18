@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask App</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            margin-top: 50px; 
+            margin-left: 500px;
+            font-size: 18px;
+            padding: 20px;
+            background-image: url('https://www.mysql.com/common/logos/logo-mysql-170x115.png');
+            background-size: auto;
+            background-position: 70px 50px; 
+            background-repeat: no-repeat;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Heading for the Database Operations -->
+    <h2>Database Operations</h2>
+    
+    <!-- Form for submitting data to the '/submit' route -->
+    <form action="/submit" method="post">
+        <!-- Dropdown to select the operation type -->
+        <label for="operation">Operation Type:</label>
+        <select name="operation" id="operation" onchange="showFieldsBasedOnOperation()">
+            <!-- Dropdown options for different operation types -->
+            <option value="select" selected>Select</option>
+            <option value="insert">Insert</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="create">Create</option>
+            <option value="set_operation">Set Operation</option>
+            <option value="set_comparison">Set Comparison</option>
+            <option value="set_membership">Set Membership</option>
+            <option value="cte">CTE (With Clause)</option>
+            <option value="aggregation">Aggregation Function</option>
+            <option value="olap">OLAP Function</option>
+
+        </select>
+        <br /><br />
+
+        <!-- Select Operation Fields -->
+        <div id="selectFields">
+            <label for="table_select">Table Selection:</label>
+            <select name="table_select" id="table_select" onchange="fetchColumnNames(this.value, 'column_info_select')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="column_info_select">Column Info:</label>
+            <input type="text" name="column_info_select" id="column_info_select" />
+            <br />
+            <label for="column_names_select">Table Columns:</label>
+            <span id="column_names_select"></span><br /><br />
+
+            <label for="where_condition_select">Where Condition (Optional):</label>
+            <input type="text" name="where_condition_select" id="where_condition_select" /><br />
+            <span class="description">E.g. project_id = 1</span><br /><br />
+        </div>
+
+        <!-- Insert Operation Fields -->
+        <div id="insertFields" style="display:none;">
+            <label for="table_insert">Table Selection:</label>
+            <select name="table_insert" id="table_insert" onchange="fetchColumnNames(this.value, 'column_info_insert')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="column_info_insert">Table Columns:</label>
+            <span id="column_names_insert"></span><br /><br />
+
+            <label for="values_info_insert">Values Info:</label>
+            <input type="text" name="values_info_insert" id="values_info_insert" /><br />
+            <span class="description">E.g. 'aaa','bbb' </span><br /><br />
+            <br /><br />
+        </div>
+
+        <!-- Update Fields -->
+        <div id="updateFields" style="display:none;">
+            <label for="table_update">Table Selection:</label>
+            <select name="table_update" id="table_update" onchange="fetchColumnNames(this.value, 'tableColumnsUpdate')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="reset_condition">Reset Condition:</label>
+            <input type="text" name="reset_condition" id="reset_condition" /><br />
+            <span class="description">E.g. Name = 'lily'</span><br /><br />
+
+            <label for="where_condition_update">Where Condition (optional):</label>
+            <input type="text" name="where_condition_update" id="where_condition_update" /><br />
+            <span class="description">E.g. Surname = 'bbb'</span><br /><br />
+
+            <label>Table Columns:</label>
+            <span id="tableColumnsUpdate"></span><br /><br />
+        </div>
+
+        <!-- Delete Fields -->
+        <div id="deleteFields" style="display:none;">
+            <label for="table_delete">Table Selection:</label>
+            <select name="table_delete" id="table_delete" onchange="fetchColumnNames(this.value, 'tableColumnsDelete')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="where_condition_delete">Where Condition (optional):</label>
+            <input type="text" name="where_condition_delete" id="where_condition_delete" /><br />
+            <span class="description">E.g. Surname = 'bbb'</span><br /><br />
+
+            <label>Table Columns:</label>
+            <span id="tableColumnsDelete"></span><br /><br />
+        </div>
+
+        <!-- Create Fields -->
+        <div id="createFields" style="display:none;">
+            <label for="table_name_create">Table Name:</label>
+            <input type="text" name="table_name_create" id="table_name_create" />
+            <br /><br />
+
+            <label for="column_type_info_create">Column & Type Info:</label>
+            <input type="text" name="column_type_info_create" id="column_type_info_create" /><br />
+            <span class="description">E.g. first_name varchar(20), last_name varchar(20)</span>
+            <br /><br />
+        </div>
+
+        <!-- Set Operation Fields -->
+        <div id="setOperationFields" style="display:none;">
+            <label for="table1_selection">Table 1 Selection:</label>
+            <select name="table1_selection" id="table1_selection" onchange="fetchColumnNames(this.value, 'column_info_set_operation')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="table2_selection">Table 2 Selection:</label>
+            <select name="table2_selection" id="table2_selection" onchange="fetchColumnNames(this.value, 'column_info_set_operation')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="table_operation">Table Operation:</label>
+            <select name="table_operation" id="table_operation">
+                <option value="join">Join</option>
+                <option value="left join">Left Join</option>
+                <option value="right join">Right Join</option>
+                <option value="union">Union</option>
+                <option value="union all">Union All</option>
+            </select>
+            <br /><br />
+
+            <label for="column_info_set_operation">Column Info:</label>
+            <input type="text" name="column_info_set_operation" id="column_info_set_operation" />
+            <label>Columns for final result</label>
+            <br /><br />
+            <label for="join_info_set_operation">Join Column for table1:</label>
+            <input type="text" name="join_info_set_operation" id="join_info_set_operation" />
+            <label>Columns for join operation</label>
+            <br /><br />
+            <label for="join_info_set_operation2">Join Column for table2:</label>
+            <input type="text" name="join_info_set_operation2" id="join_info_set_operation2" />
+            <label>Columns for join operation</label>
+            <br /><br />
+            <label>Table Columns:</label>
+            <span id="column_names_set_operation"></span><br /><br />
+        </div>
+
+        <!-- Set Comparison Fields -->
+        <div id="setComparisonFields" style="display:none;">
+            <label for="table1_selection_comparison">Table 1 Selection:</label>
+            <select name="table1_selection_comparison" id="table1_selection_comparison">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="table2_selection_comparison">Table 2 Selection:</label>
+            <select name="table2_selection_comparison" id="table2_selection_comparison">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label>Description: Compare the total number between selected tables.</label>
+            <br /><br />
+        </div>
+
+        <!-- Set Membership Fields -->
+        <div id="setMembershipFields" style="display:none;">
+            <label for="table_selection_membership">Table Selection:</label>
+            <select name="table_selection_membership" id="table_selection_membership" onchange="fetchColumnNames(this.value, 'column_names_set_member')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="column_info_membership">Column Info:</label>
+            <input type="text" name="column_info_membership" id="column_info_membership"/>
+            <label>Columns for final result.</label>
+            <br /><br />
+
+            <label for="column_selection_membership">Column Selection:</label>
+            <input type="text" name="column_selection_membership" id="column_selection_membership"/>
+            <label>Columns for where condition.</label>
+            <br /><br />
+            <label>Table Columns:</label>
+            <span id="column_names_set_member"></span><br /><br />
+
+            <label for="values_info_membership">Values Info:</label>
+            <input type="text" name="values_info_membership" id="values_info_membership" />
+            <label>Values for where condition.</label>
+            <br /><br />
+        </div>
+
+        <!-- Set CTE (with clause) Fields -->
+        <div id="cteFields" style="display:none;">
+            <!-- CTE Part -->
+            <label>Description: CTE Part</label>
+            <br /><br />
+
+            <label for="cte_rename">CTE Name:</label>
+            <input type="text" name="cte_rename" id="cte_rename" />
+            <span class="description">Give a Name.</span>
+            <br /><br />
+
+            <label for="cte_table_selection">Table Selection:</label>
+            <select name="cte_table_selection" id="cte_table_selection" onchange="fetchColumnNames(this.value, 'cte_set_selection')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="cte_column_selection">Column Selection:</label>
+            <input type="text" name="cte_column_selection" id="cte_column_selection" />
+            <span class="description">Pick Only One Column!</span><br />
+            <label>Table Columns:</label>
+            <span id="cte_set_selection"></span>
+            <br /><br />
+
+            <label for="cte_where_condition">Where Condition (Optional):</label>
+            <input type="text" name="cte_where_condition" id="cte_where_condition" />
+            <span class="description">Add a where condition if needed.</span>
+            <br /><br />
+
+            <!-- empty lines -->
+            <br />
+            <br />
+
+            <!-- Select Part -->
+            <label>Description: Select Part</label>
+            <br /><br />
+
+            <label for="cte_select_table">Table Selection:</label>
+            <select name="cte_select_table" id="cte_select_table" onchange="fetchColumnNames(this.value, 'cte_set_column_info')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="cte_column_info">Column Info:</label>
+            <input type="text" name="cte_column_info" id="cte_column_info" />
+            <span class="description">Columns for final results.</span>
+            <br /><br />
+
+            <label>Subquery Executed:</label>
+            <br /><br />
+
+            <label>Where {Same in the column selected in CTE part.} in (CTE)</label>
+            <br /><br />
+        </div>
+
+
+        <!-- Aggregation Fields -->
+        <div id="aggregationFields" style="display:none;">
+            <label for="aggregation_method">Aggregation Method:</label>
+            <select name="aggregation_method" id="aggregation_method">
+                <option value="rank">Rank</option>
+                <option value="dense_rank">Dense Rank</option>
+                <option value="percent_rank">Percent Rank</option>
+                <option value="row_number">Row Number</option>
+                <option value="sum">Sum</option>
+                <option value="count">Count</option>
+                <option value="avg">Average</option>
+            </select>
+            <br /><br />
+
+            <label for="table_aggregation">Table Selection:</label>
+            <select name="table_aggregation" id="table_aggregation" onchange="fetchColumnNames(this.value, 'column_info_aggregation')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="column_info_aggregation">Column Info:</label>
+            <input type="text" name="column_info_aggregation" id="column_info_aggregation" />
+            <label>Columns for final result.</label>
+            <br />
+            <label for="column_names_aggregation">Table Columns:</label>
+            <span id="column_names_aggregation"></span><br /><br />
+
+            <label for="aggregation_column">Aggregation Column:</label>
+            <input type="text" name="aggregation_column" id="aggregation_column" />
+            <label>Column used in aggregate function.</label>
+            <br /><br />
+
+            <label for="partition_by">Partition By:</label>
+            <input type="text" name="partition_by" id="partition_by" />
+            <br /><br />
+
+            <label for="order_by">Order By:</label>
+            <input type="text" name="order_by" id="order_by" />
+            <br /><br />
+
+            <label for="range">Range (Optional):</label>
+            <input type="text" name="range" id="range" /><br />
+            <label>E.g. rows unbounded preceding</label><br /><br />
+        </div>
+
+
+        <!-- OLAP Fields -->
+        <div id="olapFields" style="display:none;">
+            <label for="olap_method">OLAP Method:</label>
+            <select name="olap_method" id="olap_method">
+                <option value="rollup">Rollup</option>
+            </select>
+            <br /><br />
+
+            <label for="table_olap">Table Selection:</label>
+            <select name="table_olap" id="table_olap" onchange="fetchColumnNames(this.value, 'column_info_olap')">
+                {% for table in table_names %}
+                    <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+            <br /><br />
+
+            <label for="column_info_olap">Column Info:</label>
+            <input type="text" name="column_info_olap" id="column_info_olap" />
+            <br />
+            <label for="column_names_olap">Table Columns:</label>
+            <span id="column_names_olap"></span><br /><br />
+
+            <label for="group_condition_olap">Group Condition:</label>
+            <input type="text" name="group_condition_olap" id="group_condition_olap" />
+            <br /><br />
+        </div>
+
+
+        <!-- Submit button to send the form data -->
+        <input type="submit" value="Submit" style="zoom: 1.1;" />
+    </form>
+
+    <!-- JavaScript script to handle the dynamic display of form fields -->
+    <script>
+        // Show select fields when the page loads
+        document.addEventListener("DOMContentLoaded", function () {
+            showFieldsBasedOnOperation();
+        });
+
+        function showFieldsBasedOnOperation() {
+            const operationType = document.getElementById("operation").value;
+
+            // Reset all fields to hidden initially
+            hideAllFields();
+
+            // Show fields based on the selected operation type
+            switch (operationType) {
+                case "select":
+                    document.getElementById("selectFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_select").value, "column_info_select");
+                    break;
+                case "insert":
+                    document.getElementById("insertFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_insert").value, "column_info_insert");
+                    break;
+                case "update":
+                    document.getElementById("updateFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_update").value, "tableColumnsUpdate");
+                    break;
+                case "delete":
+                    document.getElementById("deleteFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_delete").value, "tableColumnsDelete");
+                    break;
+                case "create":
+                    document.getElementById("createFields").style.display = "inline";
+                    break;
+                case "set_operation":
+                    document.getElementById("setOperationFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table1_selection").value, "column_info_set_operation");
+                    break;
+                case "set_comparison":
+                    document.getElementById("setComparisonFields").style.display = "inline";
+                    break;
+                case "set_membership":
+                    document.getElementById("setMembershipFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_selection_membership").value, "column_names_set_member");
+                    break;
+                case "cte":
+                    document.getElementById("cteFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("cte_table_selection").value, "cte_set_selection");
+                    break;
+                case "aggregation":
+                    document.getElementById("aggregationFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_aggregation").value, "column_info_aggregation");
+                    break;
+                case "olap":
+                    document.getElementById("olapFields").style.display = "inline";
+                    fetchColumnNames(document.getElementById("table_olap").value, "column_info_olap");
+                    break;
+                // Add cases for other operations
+            }
+        }
+
+
+        function hideAllFields() {
+            // Reset all fields to hidden
+            const fieldIds = ["selectFields", "insertFields", "updateFields", "deleteFields", "createFields", "setOperationFields", "setComparisonFields", "setMembershipFields", "cteFields", "aggregationFields", "olapFields"];
+
+            fieldIds.forEach(function (id) {
+                document.getElementById(id).style.display = "none";
+            });
+        }
+
+        function fetchColumnNames(selectedTable, targetTextboxId, isDropdown = false, operationType) {
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const columnInfoTextbox = document.getElementById(targetTextboxId);
+                    const columnNamesSpan = document.getElementById(targetTextboxId.replace("info", "names"));
+                    const columnNamesSelect = document.getElementById(targetTextboxId.replace("info", ""));
+                    const tableColumnsSpan = document.getElementById(targetTextboxId.replace("info", "table_columns")); // Added this line
+
+                    const columnNames = JSON.parse(xhr.responseText);
+
+                    // Update the span with the fetched column names
+                    columnNamesSpan.innerHTML = columnNames.join(", ");
+                    tableColumnsSpan.innerHTML = columnNames.join(", "); // Added this line
+                    columnInfoTextbox.value = columnNames.join(", ");
+                    columnInfoSpan.innerHTML = columnNames.join(", ");
+
+                    // Update the select box or input field with the fetched column names
+                    if (isDropdown) {
+                        columnNamesSelect.innerHTML = "";
+                        for (const columnName of columnNames) {
+                            const option = document.createElement("option");
+                            option.value = columnName;
+                            option.text = columnName;
+                            columnNamesSelect.add(option);
+                        }
+                    } else {
+                        document.getElementById(targetTextboxId).value = columnNames.join(", ");
+                    }
+                }
+            };
+
+            xhr.open("GET", `/get_columns?table=${selectedTable}`, true);
+            xhr.send();
+        }
+
+    </script>
+
+</body>
+</html>
