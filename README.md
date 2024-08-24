@@ -25,6 +25,7 @@ This Project Management System is designed to streamline project workflows by of
 **Scalability:** 
 - Implemented Kubernetes for handling increasing user load and deploying multiple containerized versions of the application.
 - Performance Optimization: Reduced response times by 15% through code optimization and database indexing.
+
 **Impact:**
 - Streamlined project management workflows, reducing manual effort by over 40%.
 - Enhanced team productivity by providing a centralized hub for communication, task management, and documentation
